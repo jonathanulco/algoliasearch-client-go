@@ -107,6 +107,30 @@ func (i *Index) DeleteKey(key string) (interface{}, error) {
 	return i.client.transport.request("DELETE", "/1/indexes/"+i.nameEncoded+"/keys/"+key, nil, write)
 }
 
+func getObjectIDFromTag(object interface{}) (string, bool) {
+	objType := reflect.TypeOf(object)
+	if objType.Kind() == reflect.Ptr {
+		objType = objType.Elem()
+	}
+	for i := 0; i < objType.NumField(); i++ {
+		f := objType.Field(i)
+		if (f.Tag.Get("json") == "objectID") {
+			return reflect.Indirect(reflect.ValueOf(object)).Field(i).String(), true
+		}
+	}
+	return "", false
+}
+
+func getObjectID(object interface{}) (string, bool) {
+	if _, ok := object.(map[string]interface{}); ok {
+		return object.(map[string]interface{})["objectID"].(string), true
+	} else if id, ok := getObjectIDFromTag(object); ok {
+		return id, true
+	} else {
+		return "", false
+	}
+}
+
 func (i *Index) AddObject(object interface{}) (interface{}, error) {
 	method := "POST"
 	path := "/1/indexes/" + i.nameEncoded
@@ -114,14 +138,20 @@ func (i *Index) AddObject(object interface{}) (interface{}, error) {
 }
 
 func (i *Index) UpdateObject(object interface{}) (interface{}, error) {
-	id := object.(map[string]interface{})["objectID"]
-	path := "/1/indexes/" + i.nameEncoded + "/" + i.client.transport.urlEncode(id.(string))
+	id, ok := getObjectID(object)
+	if !ok {
+		return nil, errors.New("Unable to get objectID")
+	}
+	path := "/1/indexes/" + i.nameEncoded + "/" + i.client.transport.urlEncode(id)
 	return i.client.transport.request("PUT", path, object, write)
 }
 
 func (i *Index) PartialUpdateObject(object interface{}) (interface{}, error) {
-	id := object.(map[string]interface{})["objectID"]
-	path := "/1/indexes/" + i.nameEncoded + "/" + i.client.transport.urlEncode(id.(string)) + "/partial"
+	id, ok := getObjectID(object)
+	if !ok {
+		return nil, errors.New("Unable to get objectID")
+	}
+	path := "/1/indexes/" + i.nameEncoded + "/" + i.client.transport.urlEncode(id) + "/partial"
 	return i.client.transport.request("POST", path, object, write)
 }
 

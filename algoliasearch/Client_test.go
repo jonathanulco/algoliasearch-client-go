@@ -161,6 +161,39 @@ func TestUpdateObject(t *testing.T) {
 	index.Delete()
 }
 
+type AlgoliaObject struct {
+	id string `json:"objectID"`
+	Name string `json:"name"`
+}
+
+func TestUpdateObjectWithTag(t *testing.T) {
+	_, index := initTest(t)
+	object := new(AlgoliaObject)
+	object.Name = "John Snow"
+	object.id = "àlgol?à42"
+	_, err := index.AddObject(object)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	object.Name = "Roger"
+	resp, err := index.UpdateObject(object)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	_, err = index.WaitTask(resp)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	results, err := index.Search("", nil)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	hits := results.(map[string]interface{})["hits"]
+	shouldStr(hits.([]interface{})[0], "name", "Roger", "Unable to update an object", t)
+	shouldNotHave(hits.([]interface{})[0], "job", "Unable to update an object", t)
+	index.Delete()
+}
+
 func TestPartialUpdateObject(t *testing.T) {
 	_, index := initTest(t)
 	object := make(map[string]interface{})
