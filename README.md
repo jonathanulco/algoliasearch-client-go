@@ -48,7 +48,7 @@ You can find the full reference on [Algolia's website](https://www.algolia.com/d
 Download AlgoliaSearch using
 
 ```bash
-go get github.com/algolia/algoliasearch-client-go/algoliasearch
+go get -u -v github.com/algolia/algoliasearch-client-go/algoliasearch
 ```
 
 ## Quick Start
